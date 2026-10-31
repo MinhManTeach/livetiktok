@@ -18,6 +18,7 @@ import { TempleOverlay916 } from './TempleOverlay916';
 import { audioService } from '../services/audioService';
 import { RunTestModal } from './RunTestModal';
 import { TikTokGuideModal } from './TikTokGuideModal';
+import { MusicSeekBar } from './MusicSeekBar';
 import {
   Play,
   RotateCcw,
@@ -374,7 +375,8 @@ export const Dashboard: React.FC = () => {
       setAudioSettings((prev) => ({ ...prev, bgMusicFreq: freq, bgMusicEnabled: isPlaying }));
     } else {
       const el = getMusicEl();
-      el.src = src;
+      // Same track as last time: resume where it was paused (long tracks shouldn't restart from 0)
+      if (el.src !== new URL(src, window.location.href).href) el.src = src;
       el.volume = musicVolume / 100;
       el.loop = !musicPlayAll;
       el.play().catch(() => appendLog(`[Âm thanh] ⚠️ Không phát được "${trackName(src)}".`));
@@ -988,6 +990,9 @@ export const Dashboard: React.FC = () => {
                     <option value="all">Phát lần lượt</option>
                   </select>
                 </div>
+
+                {/* mp3 only: seek bar for long tracks */}
+                {!selectedMusic.startsWith('drone:') && <MusicSeekBar audio={getMusicEl()} />}
               </div>
 
               {/* Sliders: Pitch & Speed */}
