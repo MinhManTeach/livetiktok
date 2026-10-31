@@ -17,6 +17,7 @@ interface TempleOverlay916Props {
   onRunTest?: () => void;
   isStandalone?: boolean;
   initialSoundEnabled?: boolean;
+  initialToolbarVisible?: boolean;
 }
 
 export const TempleOverlay916: React.FC<TempleOverlay916Props> = ({
@@ -32,6 +33,7 @@ export const TempleOverlay916: React.FC<TempleOverlay916Props> = ({
   onRunTest,
   isStandalone = false,
   initialSoundEnabled = true,
+  initialToolbarVisible = true,
 }) => {
   const [activeWalkingPilgrim, setActiveWalkingPilgrim] = useState<{
     nickname: string;
@@ -42,7 +44,7 @@ export const TempleOverlay916: React.FC<TempleOverlay916Props> = ({
   const [toast, setToast] = useState<{ title: string; message: string } | null>(null);
   const [boxShake, setBoxShake] = useState(false);
   const [coinParticles, setCoinParticles] = useState<{ id: number; left: number }[]>([]);
-  const [showToolbar, setShowToolbar] = useState(true);
+  const [showToolbar, setShowToolbar] = useState(initialToolbarVisible);
   const [soundEnabled, setSoundEnabled] = useState(initialSoundEnabled);
 
   // Background priority: uploaded custom image -> theme image

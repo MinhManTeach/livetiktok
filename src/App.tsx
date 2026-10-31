@@ -18,11 +18,25 @@ export default function App() {
     }
   }, []);
 
+  // The overlay is designed at 540x960; scale it to fill whatever size the browser source is (e.g. 1080x1920)
+  const [overlayScale, setOverlayScale] = useState(1);
+  useEffect(() => {
+    if (viewMode !== 'overlay') return;
+    const fit = () => setOverlayScale(Math.min(window.innerWidth / 540, window.innerHeight / 960));
+    fit();
+    window.addEventListener('resize', fit);
+    return () => window.removeEventListener('resize', fit);
+  }, [viewMode]);
+
   if (viewMode === 'overlay') {
     return (
       <div className="w-screen h-screen bg-black flex items-center justify-center overflow-hidden">
-        <div className="w-full h-full max-w-[540px] max-h-[960px] aspect-[9/16] relative">
+        <div
+          className="relative shrink-0"
+          style={{ width: 540, height: 960, transform: `scale(${overlayScale})`, transformOrigin: 'center' }}
+        >
           <LiveOverlay />
+          {/* Invisible on stream; appears on hover when the overlay is opened in a normal browser */}
           <button
             onClick={() => {
               const url = new URL(window.location.href);
@@ -30,7 +44,7 @@ export default function App() {
               window.history.pushState({}, '', url.toString());
               setViewMode('dashboard');
             }}
-            className="absolute top-2 left-2 z-50 bg-black/80 text-amber-300 border border-amber-500/50 text-[10px] px-2 py-1 rounded font-bold hover:bg-black"
+            className="absolute top-2 left-2 z-50 bg-black/80 text-amber-300 border border-amber-500/50 text-[10px] px-2 py-1 rounded font-bold hover:bg-black opacity-0 hover:opacity-100 transition-opacity"
           >
             ← Bảng Điều Khiển
           </button>

@@ -42,6 +42,7 @@ const FALLBACK_STATE: OverlayState = {
 /**
  * OBS / TikTok LIVE Studio overlay: mirrors the Dashboard's state via /api/overlay/events.
  * Sound is off by default (the Dashboard plays audio via Desktop Audio); add &sound=1 to enable.
+ * The toolbar starts hidden so it never shows on stream; hover the top-right corner to reveal it.
  */
 export const LiveOverlay: React.FC = () => {
   const [state, setState] = useState<OverlayState>(FALLBACK_STATE);
@@ -76,6 +77,7 @@ export const LiveOverlay: React.FC = () => {
       lastAction={state.lastAction}
       isStandalone={true}
       initialSoundEnabled={soundOn}
+      initialToolbarVisible={false}
     />
   );
 };
