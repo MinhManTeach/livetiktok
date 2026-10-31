@@ -4,12 +4,14 @@
  *
  * Express server: serves the Vite app, relays TikTok LIVE events
  * (chat, gift, like, member, follow, share) to browsers via Server-Sent Events,
- * and mirrors the Dashboard's temple state to the OBS overlay (?view=overlay).
+ * mirrors the Dashboard's temple state to the OBS overlay (?view=overlay),
+ * and lists the background music files in public/music.
  */
 
 import 'dotenv/config';
 import express, { Response } from 'express';
 import path from 'path';
+import fs from 'fs/promises';
 import {
   TikTokLiveConnection,
   WebcastEvent,
@@ -17,7 +19,7 @@ import {
   UserOfflineError,
   InvalidResponseCompositeError,
 } from 'tiktok-live-connector';
-import type { TikTokLiveEvent } from './src/types';
+import type { TikTokLiveEvent, MusicTrack } from './src/types';
 
 const PORT = Number(process.env.PORT) || 3000;
 const isProd = process.argv.includes('--prod') || process.env.NODE_ENV === 'production';
@@ -92,6 +94,22 @@ app.get('/api/overlay/background', (_req, res) => {
     return;
   }
   res.type(background.type).send(background.data);
+});
+
+// ---------- Background music (drop audio files into public/music) ----------
+const musicDir = path.resolve(import.meta.dirname, 'public', 'music');
+const MUSIC_EXTS = new Set(['.mp3', '.m4a', '.aac', '.ogg', '.wav']);
+
+// Served directly (not via dist) so files added after a production build still show up
+app.use('/music', express.static(musicDir));
+
+app.get('/api/music', async (_req, res) => {
+  const files = await fs.readdir(musicDir).catch(() => [] as string[]);
+  const tracks: MusicTrack[] = files
+    .filter((f) => MUSIC_EXTS.has(path.extname(f).toLowerCase()))
+    .sort((a, b) => a.localeCompare(b, 'vi'))
+    .map((f) => ({ name: path.parse(f).name, url: `/music/${encodeURIComponent(f)}` }));
+  res.json(tracks);
 });
 
 // ---------- TikTok connection ----------

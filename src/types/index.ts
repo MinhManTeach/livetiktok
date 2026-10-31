@@ -100,3 +100,9 @@ export interface OverlayState {
   customBgUrl?: string;
   lastAction: ActionEffect | null;
 }
+
+// An audio file in public/music, listed by GET /api/music
+export interface MusicTrack {
+  name: string;
+  url: string;
+}

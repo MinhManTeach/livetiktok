@@ -9,6 +9,7 @@ import {
   SkinType,
   TikTokLiveEvent,
   OverlayState,
+  MusicTrack,
 } from '../types';
 import { TEMPLE_THEMES, TIKTOK_GIFTS, INITIAL_DEVOTEES } from '../data/templeThemes';
 import { TempleOverlay916 } from './TempleOverlay916';
@@ -94,6 +95,14 @@ export const Dashboard: React.FC = () => {
   const [giftCount, setGiftCount] = useState(1);
   const [tiktokId, setTiktokId] = useState('@review.nghip.v');
   const [tiktokStatus, setTiktokStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected');
+
+  // Background music
+  const [musicTracks, setMusicTracks] = useState<MusicTrack[]>([]);
+  const [selectedMusic, setSelectedMusic] = useState('drone:432');
+  const [playingMusic, setPlayingMusic] = useState<string | null>(null);
+  const [musicVolume, setMusicVolume] = useState(60);
+  const [musicPlayAll, setMusicPlayAll] = useState(false);
+  const musicElRef = useRef<HTMLAudioElement | null>(null);
 
   // Auto-simulation state
   const [isAutoSimActive, setIsAutoSimActive] = useState(false);
@@ -305,18 +314,88 @@ export const Dashboard: React.FC = () => {
     appendLog('[Thao tác] Đã làm trống toàn bộ bồ đoàn Chánh Điện.');
   };
 
+  // Background music: built-in drones ("drone:432") or mp3 files from public/music (their URL)
+  const getMusicEl = () => {
+    if (!musicElRef.current) musicElRef.current = new Audio();
+    return musicElRef.current;
+  };
+
+  const loadMusicTracks = () => {
+    fetch('/api/music')
+      .then((res) => res.json())
+      .then((tracks: MusicTrack[]) => setMusicTracks(tracks))
+      .catch(() => setMusicTracks([]));
+  };
+
+  useEffect(() => {
+    loadMusicTracks();
+    return () => musicElRef.current?.pause();
+  }, []);
+
+  const trackName = (src: string) =>
+    src.startsWith('drone:') ? `nhạc thiền ${src.slice(6)}Hz` : musicTracks.find((t) => t.url === src)?.name ?? src;
+
+  const playMusic = (src: string) => {
+    if (src.startsWith('drone:')) {
+      const freq = Number(src.slice(6));
+      const isPlaying = audioService.toggleAmbientDrone(freq, (state) => {
+        setAudioSettings((prev) => ({ ...prev, bgMusicEnabled: state }));
+      });
+      setAudioSettings((prev) => ({ ...prev, bgMusicFreq: freq, bgMusicEnabled: isPlaying }));
+    } else {
+      const el = getMusicEl();
+      el.src = src;
+      el.volume = musicVolume / 100;
+      el.loop = !musicPlayAll;
+      el.play().catch(() => appendLog(`[Âm thanh] ⚠️ Không phát được "${trackName(src)}".`));
+      setAudioSettings((prev) => ({ ...prev, bgMusicEnabled: true }));
+    }
+    setPlayingMusic(src);
+    appendLog(`[Âm thanh] 🎵 Đang phát ${trackName(src)}.`);
+  };
+
+  const stopMusic = () => {
+    if (playingMusic?.startsWith('drone:')) audioService.toggleAmbientDrone();
+    else musicElRef.current?.pause();
+    setPlayingMusic(null);
+    setAudioSettings((prev) => ({ ...prev, bgMusicEnabled: false }));
+  };
+
   // Toggle ambient music
   const handleToggleAmbient = () => {
-    const isPlaying = audioService.toggleAmbientDrone(audioSettings.bgMusicFreq, (state) => {
-      setAudioSettings((prev) => ({ ...prev, bgMusicEnabled: state }));
-    });
-    setAudioSettings((prev) => ({ ...prev, bgMusicEnabled: isPlaying }));
-    appendLog(
-      isPlaying
-        ? `[Âm thanh] Đang phát nhạc thiền ${audioSettings.bgMusicFreq}Hz tĩnh tâm.`
-        : '[Âm thanh] Đã dừng nhạc thiền.'
-    );
+    if (playingMusic) {
+      stopMusic();
+      appendLog('[Âm thanh] Đã dừng nhạc nền.');
+    } else {
+      playMusic(selectedMusic);
+    }
   };
+
+  // Switching track while music is on plays the new one right away
+  const handleSelectMusic = (src: string) => {
+    setSelectedMusic(src);
+    if (playingMusic) {
+      stopMusic();
+      playMusic(src);
+    }
+  };
+
+  useEffect(() => {
+    if (musicElRef.current) musicElRef.current.volume = musicVolume / 100;
+  }, [musicVolume]);
+
+  useEffect(() => {
+    const el = getMusicEl();
+    el.loop = !musicPlayAll;
+    // "Phát lần lượt": move on to the next mp3 when one ends
+    el.onended = () => {
+      const idx = musicTracks.findIndex((t) => t.url === playingMusic);
+      if (idx === -1 || musicTracks.length === 0) return;
+      const next = musicTracks[(idx + 1) % musicTracks.length];
+      setSelectedMusic(next.url);
+      playMusic(next.url);
+    };
+  });
 
   // Toggle wooden fish loop
   const handleToggleWoodenFish = (enabled: boolean) => {
@@ -794,16 +873,30 @@ export const Dashboard: React.FC = () => {
                 <label className="text-[11px] text-amber-200/80 block mb-1">🎵 Nhạc Nền Thiền Tĩnh Tâm:</label>
                 <div className="flex gap-2">
                   <select
-                    value={audioSettings.bgMusicFreq}
-                    onChange={(e) => {
-                      const f = Number(e.target.value);
-                      setAudioSettings((prev) => ({ ...prev, bgMusicFreq: f }));
-                    }}
-                    className="flex-1 bg-[#120703] border border-amber-600/60 rounded px-2 py-1 text-xs text-amber-100 font-semibold"
+                    value={selectedMusic}
+                    onChange={(e) => handleSelectMusic(e.target.value)}
+                    className="flex-1 min-w-0 bg-[#120703] border border-amber-600/60 rounded px-2 py-1 text-xs text-amber-100 font-semibold"
                   >
-                    <option value="432">1. Nhạc Thiền Tĩnh Tâm 432Hz (Chuông Xoay Tây Tạng)</option>
-                    <option value="528">2. Tần Số Chữa Lành 528Hz & Suối Chảy Tự Nhiên</option>
+                    <optgroup label="Âm thiền có sẵn">
+                      <option value="drone:432">Nhạc Thiền Tĩnh Tâm 432Hz (Chuông Xoay Tây Tạng)</option>
+                      <option value="drone:528">Tần Số Chữa Lành 528Hz & Suối Chảy Tự Nhiên</option>
+                    </optgroup>
+                    <optgroup label={musicTracks.length ? 'Nhạc mp3 (public/music)' : 'Chưa có mp3 trong public/music'}>
+                      {musicTracks.map((t) => (
+                        <option key={t.url} value={t.url}>
+                          {t.name}
+                        </option>
+                      ))}
+                    </optgroup>
                   </select>
+
+                  <button
+                    onClick={loadMusicTracks}
+                    title="Tải lại danh sách nhạc sau khi chép thêm file vào public/music"
+                    className="px-2 py-1 rounded text-xs border bg-[#2e170a] text-amber-200 border-amber-600/50 hover:bg-[#3d1f0e]"
+                  >
+                    <RotateCcw size={12} />
+                  </button>
 
                   <button
                     onClick={handleToggleAmbient}
@@ -816,6 +909,28 @@ export const Dashboard: React.FC = () => {
                     <Music size={12} />
                     <span>{audioSettings.bgMusicEnabled ? 'Tắt Nhạc' : 'Bật Nhạc'}</span>
                   </button>
+                </div>
+
+                {/* mp3 only: volume and repeat mode */}
+                <div className="flex items-center gap-2 mt-1.5 text-[11px] text-amber-200/80">
+                  <span>Âm lượng mp3:</span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={musicVolume}
+                    onChange={(e) => setMusicVolume(Number(e.target.value))}
+                    className="flex-1 accent-amber-500"
+                  />
+                  <span className="font-mono text-amber-300 w-8 text-right">{musicVolume}%</span>
+                  <select
+                    value={musicPlayAll ? 'all' : 'one'}
+                    onChange={(e) => setMusicPlayAll(e.target.value === 'all')}
+                    className="bg-[#120703] border border-amber-600/60 rounded px-1 py-0.5 text-[11px] text-amber-100"
+                  >
+                    <option value="one">Lặp 1 bài</option>
+                    <option value="all">Phát lần lượt</option>
+                  </select>
                 </div>
               </div>
 

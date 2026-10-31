@@ -6,3 +6,7 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Background music is your own content; add files to public/music locally
+public/music/*
+!public/music/.gitkeep
