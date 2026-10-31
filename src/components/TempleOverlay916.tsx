@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Devotee, MeritRecord, TempleTheme, ActionEffect } from '../types';
+import { Devotee, MeritRecord, TempleTheme, ActionEffect, TempleMode } from '../types';
 import { DevoteeFigure } from './DevoteeFigure';
 import { IncenseBurner } from './IncenseBurner';
 import { SeatingWing } from './SeatingWing';
+import { ChurchSeating } from './ChurchSeating';
+import { ChurchgoerFigure } from './ChurchgoerFigure';
+import { VotiveCandles } from './VotiveCandles';
+import { MODE_TEXT, CHURCH_BG_URL } from '../data/modeTexts';
 import { Volume2, VolumeX, Eye, EyeOff, Upload, Sparkles } from 'lucide-react';
 import { audioService } from '../services/audioService';
 
@@ -20,6 +24,7 @@ interface TempleOverlay916Props {
   isStandalone?: boolean;
   initialSoundEnabled?: boolean;
   initialToolbarVisible?: boolean;
+  mode?: TempleMode;
 }
 
 export const TempleOverlay916: React.FC<TempleOverlay916Props> = ({
@@ -36,7 +41,10 @@ export const TempleOverlay916: React.FC<TempleOverlay916Props> = ({
   isStandalone = false,
   initialSoundEnabled = true,
   initialToolbarVisible = true,
+  mode = 'chua',
 }) => {
+  const isChurch = mode === 'nhatho';
+  const text = MODE_TEXT[mode];
   const [activeWalkingPilgrim, setActiveWalkingPilgrim] = useState<{
     nickname: string;
     prayer: string;
@@ -49,8 +57,8 @@ export const TempleOverlay916: React.FC<TempleOverlay916Props> = ({
   const [showToolbar, setShowToolbar] = useState(initialToolbarVisible);
   const [soundEnabled, setSoundEnabled] = useState(initialSoundEnabled);
 
-  // Background priority: uploaded custom image -> theme image
-  const effectiveBg = customBgUrl || currentTheme.bgUrl;
+  // Background priority: church drawing in church mode; otherwise uploaded custom image -> theme image
+  const effectiveBg = isChurch ? CHURCH_BG_URL : customBgUrl || currentTheme.bgUrl;
 
   // React to actions (Incense, Gift / Merit Box)
   useEffect(() => {
@@ -58,13 +66,13 @@ export const TempleOverlay916: React.FC<TempleOverlay916Props> = ({
 
     if (lastAction.type === 'INCENSE') {
       setActiveWalkingPilgrim({
-        nickname: lastAction.nickname || 'Phật Tử Thành Tâm',
-        prayer: lastAction.message || 'nam mô a Di Đà Phật 🙏',
+        nickname: lastAction.nickname || text.walkerName,
+        prayer: lastAction.message || text.defaultPrayer,
         skin: 'phattu_ao_lam',
       });
       setToast({
-        title: '🕯️ THÀNH TÂM DÂNG HƯƠNG 🕯️',
-        message: `${lastAction.nickname || 'Phật tử'} vừa dâng nén tâm hương kính Phật!`,
+        title: text.lightToastTitle,
+        message: text.lightToast(lastAction.nickname || text.walkerName),
       });
       if (soundEnabled) {
         audioService.playTempleBell(0.4);
@@ -73,8 +81,8 @@ export const TempleOverlay916: React.FC<TempleOverlay916Props> = ({
       setTimeout(() => setToast(null), 4200);
     } else if (lastAction.type === 'MERIT_BOX') {
       setActiveWalkingPilgrim({
-        nickname: lastAction.nickname || 'Thí Chủ Hảo Tâm',
-        prayer: `Dâng ${lastAction.giftName || 'quà'} cúng dường Tam Bảo`,
+        nickname: lastAction.nickname || text.giverName,
+        prayer: text.walkerGiftPrayer(lastAction.giftName || 'quà'),
         skin: 'su_thay',
       });
       setBoxShake(true);
@@ -95,8 +103,8 @@ export const TempleOverlay916: React.FC<TempleOverlay916Props> = ({
       }
 
       setToast({
-        title: '✨ CÔNG ĐỨC VÔ LƯỢNG ✨',
-        message: `Thí chủ ${lastAction.nickname} vừa cúng dường ${lastAction.giftName} (+${lastAction.coins} xu) vào Hòm Công Đức!`,
+        title: text.giftToastTitle,
+        message: text.giftToast(lastAction.nickname || text.giverName, lastAction.giftName || 'quà', lastAction.coins ?? 0),
       });
 
       setTimeout(() => setBoxShake(false), 700);
@@ -134,13 +142,17 @@ export const TempleOverlay916: React.FC<TempleOverlay916Props> = ({
       />
 
       {/* Dark vignette & ambient temple gradient */}
-      <div className="absolute inset-0 bg-radial-[circle_at_50%_25%] from-transparent via-[#140803a6] to-[#0a0402f0] pointer-events-none" />
+      <div
+        className={`absolute inset-0 bg-radial-[circle_at_50%_25%] from-transparent pointer-events-none ${
+          isChurch ? 'via-transparent to-[#0a040280]' : 'via-[#140803a6] to-[#0a0402f0]'
+        }`}
+      />
 
       {/* God-Rays Light Stream */}
       <div className="absolute inset-0 pointer-events-none opacity-40 bg-gradient-to-tr from-transparent via-amber-200/15 to-transparent animate-beam-glow" />
 
-      {/* Falling Lotus Petals */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      {/* Falling Lotus Petals (temple only) */}
+      <div className={`absolute inset-0 pointer-events-none overflow-hidden ${isChurch ? 'hidden' : ''}`}>
         {[...Array(6)].map((_, i) => (
           <div
             key={i}
@@ -201,20 +213,20 @@ export const TempleOverlay916: React.FC<TempleOverlay916Props> = ({
       <div className="relative z-10 text-center pt-3 pb-1 shrink-0">
         <div className="inline-block bg-gradient-to-r from-[#441905ea] via-[#752f08f0] to-[#441905ea] border-2 border-amber-400/90 rounded-full px-5 py-1 shadow-2xl backdrop-blur-sm">
           <h1 className="text-[15px] sm:text-[17px] font-extrabold text-amber-200 tracking-wider font-buddhist drop-shadow-md">
-            ☸ THIỀN ĐƯỜNG TỊNH TÂM ☸
+            {text.title}
           </h1>
           <p className="text-[9.5px] text-amber-300/90 font-medium tracking-wide">
-            Nam Mô Bổn Sư Thích Ca Mâu Ni Phật
+            {text.subtitle}
           </p>
         </div>
 
         {/* Counter Badges */}
         <div className="flex justify-center items-center gap-2 mt-1.5 text-[10px] font-bold">
           <div className="bg-black/75 border border-amber-500/60 px-2.5 py-0.5 rounded-full text-amber-200 shadow">
-            🧘 {devotees.length}/{maxSlots} đang thiền
+            {text.attendIcon} {devotees.length}/{maxSlots} {text.attending}
           </div>
           <div className="bg-black/75 border border-amber-500/60 px-2.5 py-0.5 rounded-full text-amber-300 shadow">
-            🕯️ {incenseCount} nén tâm hương
+            🕯️ {incenseCount} {text.lightUnit}
           </div>
         </div>
       </div>
@@ -223,7 +235,7 @@ export const TempleOverlay916: React.FC<TempleOverlay916Props> = ({
       <div className="relative h-[37%] flex flex-col items-center justify-end pb-1.5 shrink-0 z-[25]">
         {/* Divine Glowing Halo behind Buddha head */}
         <div
-          className="absolute top-[8%] w-36 h-36 rounded-full blur-xl animate-halo pointer-events-none"
+          className={`absolute top-[8%] w-36 h-36 rounded-full blur-xl animate-halo pointer-events-none ${isChurch ? 'hidden' : ''}`}
           style={{ background: currentTheme.haloColor }}
         />
 
@@ -232,9 +244,9 @@ export const TempleOverlay916: React.FC<TempleOverlay916Props> = ({
           <div className="font-bold text-amber-300 border-b border-amber-500/30 pb-0.5 mb-1">
             💬 LỆNH PHÒNG LIVE
           </div>
-          <p>• Chat bất kỳ vào bồ đoàn</p>
-          <p>• Gõ <b className="text-amber-300">"thắp hương"</b> dâng lễ</p>
-          <p>• 🎁 <b className="text-amber-300">Tặng quà</b> vào Hòm</p>
+          <p>• {text.guideChat}</p>
+          <p>• {text.guideLight[0]}<b className="text-amber-300">{text.guideLight[1]}</b>{text.guideLight[2]}</p>
+          <p>• 🎁 <b className="text-amber-300">{text.guideGift[0]}</b>{text.guideGift[1]}</p>
         </div>
 
         {/* RIGHT MERIT BOX (Hòm Công Đức sơn son thếp vàng & Bảng vinh danh) */}
@@ -257,7 +269,7 @@ export const TempleOverlay916: React.FC<TempleOverlay916Props> = ({
             ))}
             <div className="w-8 h-1 bg-[#100502] border border-amber-300 rounded-full mx-auto mb-1" />
             <div className="text-[8.5px] sm:text-[9.5px] font-black text-amber-200 tracking-wider">
-              ⛩️ HÒM CÔNG ĐỨC
+              {text.boxTitle}
             </div>
             <div className="text-[10.5px] sm:text-[12px] font-black text-emerald-400 drop-shadow">
               {meritTotal.toLocaleString()} Xu
@@ -265,7 +277,7 @@ export const TempleOverlay916: React.FC<TempleOverlay916Props> = ({
           </div>
 
           <div className="text-[7.5px] sm:text-[8.5px] text-amber-300 font-bold mb-0.5 tracking-tight">
-            ✦ BẢNG CÔNG ĐỨC ✦
+            {text.boardTitle}
           </div>
           <div className="max-h-14 overflow-hidden text-left text-[7.5px] text-amber-100/90 border-t border-amber-700/50 pt-0.5 space-y-0.5">
             {meritList.length > 0 ? (
@@ -276,7 +288,7 @@ export const TempleOverlay916: React.FC<TempleOverlay916Props> = ({
               ))
             ) : (
               <div className="text-amber-400/60 italic text-center text-[7px]">
-                Đang chờ thí chủ...
+                {text.waiting}
               </div>
             )}
           </div>
@@ -285,12 +297,21 @@ export const TempleOverlay916: React.FC<TempleOverlay916Props> = ({
       </div>
 
       {/* BRONZE INCENSE BOWL on the altar table, between the two fruit plates of the background (Bát Hương Đồng) */}
-      <div className="absolute left-1/2 top-[53.5%] -translate-x-1/2 -translate-y-full scale-[0.85] origin-bottom z-[24]">
-        <IncenseBurner stickCount={stickCount} />
-      </div>
+      {!isChurch && (
+        <div className="absolute left-1/2 top-[53.5%] -translate-x-1/2 -translate-y-full scale-[0.85] origin-bottom z-[24]">
+          <IncenseBurner stickCount={stickCount} />
+        </div>
+      )}
+
+      {/* VOTIVE CANDLE STAND at the left foot of the sanctuary steps (church: one candle per prayer) */}
+      {isChurch && (
+        <div className="absolute left-[27%] top-[66%] -translate-x-1/2 -translate-y-full scale-[0.8] origin-bottom z-[24]">
+          <VotiveCandles count={incenseCount} />
+        </div>
+      )}
 
       {/* CHIEF WORSHIPPER standing where the red carpet ends, at the foot of the altar (Vị trí Chủ Lễ) */}
-      {chiefDevotee && (
+      {chiefDevotee && !isChurch && (
         <div className="absolute left-1/2 top-[67%] -translate-x-1/2 -translate-y-full z-[26]">
           <DevoteeFigure
             nickname={chiefDevotee.nickname}
@@ -301,6 +322,23 @@ export const TempleOverlay916: React.FC<TempleOverlay916Props> = ({
             isChief={true}
             showPrayer={true}
           />
+        </div>
+      )}
+
+      {/* Church: the first person stands praying at the foot of the sanctuary steps */}
+      {chiefDevotee && isChurch && (
+        <div className="absolute left-1/2 top-[69%] -translate-x-1/2 -translate-y-full scale-[0.7] origin-bottom z-[26] flex flex-col items-center">
+          <ChurchgoerFigure nickname={chiefDevotee.nickname} prayer={MODE_TEXT.nhatho.chiefPrayer} showPrayer={true} isStanding={true} />
+          <div className="inline-flex items-center gap-1 bg-[#120a06ec] border border-amber-400 ring-1 ring-amber-300/40 rounded-full py-0.5 px-1.5 -mt-1.5 shadow-md max-w-[80px]">
+            <span className="text-[7.5px] font-bold text-amber-200 truncate leading-none">{chiefDevotee.nickname}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Church: churchgoers seated on the background's pews */}
+      {isChurch && (
+        <div className="absolute inset-0 z-20 pointer-events-none">
+          <ChurchSeating devotees={seatedDevotees} />
         </div>
       )}
 
@@ -319,29 +357,46 @@ export const TempleOverlay916: React.FC<TempleOverlay916Props> = ({
       {/* SEATING SANCTUARY: 2 WINGS (LEFT & RIGHT) + CENTER RED CARPET AISLE */}
       <div className="relative flex-1 px-2 pb-1 overflow-hidden z-20 flex">
         {/* Left Wing Seating */}
-        <SeatingWing devotees={seatedDevotees.filter((_, idx) => idx % 2 === 0)} cols={seatCols} side="left" />
+        {isChurch ? (
+          <div className="flex-1" />
+        ) : (
+          <SeatingWing devotees={seatedDevotees.filter((_, idx) => idx % 2 === 0)} cols={seatCols} side="left" />
+        )}
 
         {/* Center Red Carpet Aisle (Lối đi Thảm Đỏ Lễ Phật) */}
         <div className="relative w-18 sm:w-22 h-full mx-1 flex flex-col items-center justify-end">
           {/* Red Carpet Floor Texture */}
-          <div className="absolute inset-x-0 bottom-0 top-[38%] bg-gradient-to-b from-[#64100c] via-[#851610] to-[#500c09] border-x-2 border-amber-400/80 shadow-[inset_0_0_12px_rgba(0,0,0,0.8)] opacity-90 rounded-t-sm" />
+          <div className={`absolute inset-x-0 bottom-0 top-[38%] ${isChurch ? 'hidden' : ''} bg-gradient-to-b from-[#64100c] via-[#851610] to-[#500c09] border-x-2 border-amber-400/80 shadow-[inset_0_0_12px_rgba(0,0,0,0.8)] opacity-90 rounded-t-sm`} />
 
           {/* Walking Pilgrim along the Red Carpet */}
           {activeWalkingPilgrim && (
             <div className="absolute animate-walk-carpet z-40">
-              <DevoteeFigure
-                nickname={activeWalkingPilgrim.nickname}
-                skin={activeWalkingPilgrim.skin}
-                prayer={activeWalkingPilgrim.prayer}
-                isStanding={true}
-                showPrayer={true}
-              />
+              {isChurch ? (
+                <ChurchgoerFigure
+                  nickname={activeWalkingPilgrim.nickname}
+                  prayer={activeWalkingPilgrim.prayer}
+                  isStanding={true}
+                  showPrayer={true}
+                />
+              ) : (
+                <DevoteeFigure
+                  nickname={activeWalkingPilgrim.nickname}
+                  skin={activeWalkingPilgrim.skin}
+                  prayer={activeWalkingPilgrim.prayer}
+                  isStanding={true}
+                  showPrayer={true}
+                />
+              )}
             </div>
           )}
         </div>
 
         {/* Right Wing Seating */}
-        <SeatingWing devotees={seatedDevotees.filter((_, idx) => idx % 2 !== 0)} cols={seatCols} side="right" />
+        {isChurch ? (
+          <div className="flex-1" />
+        ) : (
+          <SeatingWing devotees={seatedDevotees.filter((_, idx) => idx % 2 !== 0)} cols={seatCols} side="right" />
+        )}
       </div>
 
       {/* BOTTOM HUD: GIFT ACTION CARDS & LEADERBOARD (TẤM LÒNG THÀNH) */}
@@ -349,33 +404,19 @@ export const TempleOverlay916: React.FC<TempleOverlay916Props> = ({
         {/* Left: Recent Buddhist Ticker & Gift Quick Cards */}
         <div className="col-span-3 bg-[#130904ea] border border-amber-500/70 rounded-lg p-1.5 flex flex-col justify-between shadow-lg">
           <div className="text-[8.5px] sm:text-[9.5px] font-bold text-amber-200 truncate text-center mb-1">
-            ☸ Thành tâm kính lễ Đức Bổn Sư Thích Ca Mâu Ni Phật ☸
+            {text.ticker}
           </div>
 
           <div className="grid grid-cols-3 gap-1">
-            <div className="bg-[#2a170ef0] border border-amber-500/40 rounded p-1 flex items-center gap-1">
-              <span className="text-xs">🕯️</span>
-              <div className="leading-none truncate">
-                <div className="text-[6.5px] font-bold text-amber-400">1 COIN</div>
-                <div className="text-[7.5px] font-semibold text-white truncate">Dâng hương</div>
+            {text.cards.map((card) => (
+              <div key={card.label} className="bg-[#2a170ef0] border border-amber-500/40 rounded p-1 flex items-center gap-1">
+                <span className="text-xs">{card.icon}</span>
+                <div className="leading-none truncate">
+                  <div className="text-[6.5px] font-bold text-amber-400">{card.coin}</div>
+                  <div className="text-[7.5px] font-semibold text-white truncate">{card.label}</div>
+                </div>
               </div>
-            </div>
-
-            <div className="bg-[#2a170ef0] border border-amber-500/40 rounded p-1 flex items-center gap-1">
-              <span className="text-xs">🪷</span>
-              <div className="leading-none truncate">
-                <div className="text-[6.5px] font-bold text-amber-400">5 COINS</div>
-                <div className="text-[7.5px] font-semibold text-white truncate">Lễ Phật</div>
-              </div>
-            </div>
-
-            <div className="bg-[#2a170ef0] border border-amber-500/40 rounded p-1 flex items-center gap-1">
-              <span className="text-xs">💐</span>
-              <div className="leading-none truncate">
-                <div className="text-[6.5px] font-bold text-amber-400">10+ COIN</div>
-                <div className="text-[7.5px] font-semibold text-white truncate">Hoa sen</div>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 

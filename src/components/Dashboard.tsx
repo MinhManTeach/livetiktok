@@ -9,9 +9,11 @@ import {
   SkinType,
   TikTokLiveEvent,
   OverlayState,
+  TempleMode,
   MusicTrack,
 } from '../types';
 import { TEMPLE_THEMES, TIKTOK_GIFTS, INITIAL_DEVOTEES } from '../data/templeThemes';
+import { MODE_TEXT } from '../data/modeTexts';
 import { TempleOverlay916 } from './TempleOverlay916';
 import { audioService } from '../services/audioService';
 import { RunTestModal } from './RunTestModal';
@@ -39,6 +41,22 @@ import {
 export const Dashboard: React.FC = () => {
   // Temple State
   const [currentTheme, setCurrentTheme] = useState<TempleTheme>(TEMPLE_THEMES[0]);
+  // Interface: Buddhist temple or Catholic church (remembered in this browser)
+  const [templeMode, setTempleMode] = useState<TempleMode>(() => {
+    try {
+      return localStorage.getItem('templeMode') === 'nhatho' ? 'nhatho' : 'chua';
+    } catch {
+      return 'chua';
+    }
+  });
+  const modeText = MODE_TEXT[templeMode];
+  useEffect(() => {
+    try {
+      localStorage.setItem('templeMode', templeMode);
+    } catch {
+      // Storage unavailable: mode just isn't remembered
+    }
+  }, [templeMode]);
   const [customBgUrl, setCustomBgUrl] = useState<string | undefined>(undefined);
   const [maxSlots, setMaxSlots] = useState<number>(36);
   const [incenseCount, setIncenseCount] = useState<number>(3);
@@ -201,14 +219,17 @@ export const Dashboard: React.FC = () => {
       nickname: viewerName,
       giftName: `${giftCount > 1 ? `${giftCount}x ` : ''}${gift.name}`,
       coins: totalCoins,
-      prayer: viewerPrayer || 'Cúng dường Tam Bảo, phước báu vô lượng',
+      prayer: viewerPrayer || modeText.giftPrayer,
       timestamp: Date.now(),
     };
 
     setMeritList((prev) => [newRecord, ...prev.slice(0, 19)]);
     addOrUpdateDevotee(viewerName, viewerSkin, newRecord.prayer, true, totalCoins);
 
-    const ttsText = `Nam Mô A Di Đà Phật. Xướng tên công đức thí chủ ${viewerName}, vừa phát tâm cúng dường ${newRecord.giftName} vào hòm công đức. Nguyện đem công đức này hồi hướng cho thí chủ thân tâm an lạc, sở cầu như ý.`;
+    const ttsText =
+      templeMode === 'nhatho'
+        ? modeText.giftTts(viewerName, newRecord.giftName)
+        : `Nam Mô A Di Đà Phật. Xướng tên công đức thí chủ ${viewerName}, vừa phát tâm cúng dường ${newRecord.giftName} vào hòm công đức. Nguyện đem công đức này hồi hướng cho thí chủ thân tâm an lạc, sở cầu như ý.`;
 
     setLastAction({
       type: 'MERIT_BOX',
@@ -455,13 +476,7 @@ export const Dashboard: React.FC = () => {
         'Gia Bảo',
         'Tuệ An',
       ];
-      const prayers = [
-        'Con xin thắp nén tâm hương cầu bình an',
-        'Nam Mô A Di Đà Phật 🙏',
-        'Cầu gia đạo bình an, sức khỏe dồi dào',
-        'Thành tâm lễ Phật, cầu thi cử đỗ đạt',
-        'Cầu bình an may mắn vạn sự như ý',
-      ];
+      const prayers = modeText.simPrayers;
       const gifts = [
         { name: 'Hoa Hồng', coins: 1 },
         { name: 'Nén Tâm Hương', coins: 5 },
@@ -499,7 +514,7 @@ export const Dashboard: React.FC = () => {
             giftName: g.name,
             coins: g.coins,
             ttsText: audioSettings.directAudioEnabled
-              ? `Nam Mô A Di Đà Phật. Thí chủ ${randName} vừa cúng dường ${g.name} vào Hòm Công Đức.`
+              ? modeText.giftTts(randName, g.name)
               : undefined,
             timestamp: Date.now(),
           });
@@ -545,7 +560,7 @@ export const Dashboard: React.FC = () => {
     const name = ev.nickname;
     switch (ev.type) {
       case 'chat': {
-        const prayer = ev.comment || 'Nam Mô A Di Đà Phật 🙏';
+        const prayer = ev.comment || modeText.defaultPrayer;
         setIncenseCount((prev) => prev + 1);
         setLastAction({ type: 'INCENSE', nickname: name, message: prayer, timestamp: Date.now() });
         addOrUpdateDevotee(name, 'phattu_ao_lam', prayer, true, 0);
@@ -555,7 +570,7 @@ export const Dashboard: React.FC = () => {
       case 'gift': {
         const coins = ev.coins ?? 1;
         const giftName = `${(ev.repeatCount ?? 1) > 1 ? `${ev.repeatCount}x ` : ''}${ev.giftName}`;
-        const prayer = 'Cúng dường Tam Bảo, phước báu vô lượng';
+        const prayer = modeText.giftPrayer;
         setMeritTotal((prev) => prev + coins);
         setIncenseCount((prev) => prev + 2);
         setMeritList((prev) => [
@@ -569,7 +584,7 @@ export const Dashboard: React.FC = () => {
           giftName,
           coins,
           ttsText: audioSettings.directAudioEnabled
-            ? `Nam Mô A Di Đà Phật. Thí chủ ${name} vừa cúng dường ${giftName} vào Hòm Công Đức.`
+            ? modeText.giftTts(name, giftName)
             : undefined,
           timestamp: Date.now(),
         });
@@ -577,8 +592,8 @@ export const Dashboard: React.FC = () => {
         break;
       }
       case 'member':
-        addOrUpdateDevotee(name, 'phattu_ao_lam', 'Nam Mô A Di Đà Phật', false, 0);
-        appendLog(`[Live] 🧘 ${name} vừa vào Chánh Điện.`);
+        addOrUpdateDevotee(name, 'phattu_ao_lam', modeText.joinPrayer, false, 0);
+        appendLog(`[Live] ${modeText.joinLog(name)}`);
         break;
       case 'follow':
         appendLog(`[Live] 🙏 ${name} đã theo dõi kênh.`);
@@ -611,6 +626,7 @@ export const Dashboard: React.FC = () => {
       // blob: URLs only exist in this tab; the server URL replaces it once the upload finishes
       customBgUrl: customBgUrl?.startsWith('blob:') ? undefined : customBgUrl,
       lastAction,
+      mode: templeMode,
     };
     const timer = setTimeout(() => {
       fetch('/api/overlay/state', {
@@ -620,7 +636,7 @@ export const Dashboard: React.FC = () => {
       }).catch(() => undefined);
     }, 100);
     return () => clearTimeout(timer);
-  }, [devotees, maxSlots, incenseCount, meritTotal, meritList, currentTheme, customBgUrl, lastAction]);
+  }, [devotees, maxSlots, incenseCount, meritTotal, meritList, currentTheme, customBgUrl, lastAction, templeMode]);
 
   const handleTikTokConnect = async () => {
     if (tiktokStatus === 'connected' || tiktokStatus === 'connecting') {
@@ -800,6 +816,37 @@ export const Dashboard: React.FC = () => {
       <main className="flex-1 p-3 grid grid-cols-1 lg:grid-cols-12 gap-3 overflow-hidden">
         {/* COLUMN 1: KHÔNG GIAN CHÙA & ÂM THANH (Lg: 4 Cols) */}
         <section className="lg:col-span-4 flex flex-col gap-3">
+          {/* 0. GIAO DIỆN: CHÙA / NHÀ THỜ */}
+          <div className="bg-[#1e0f06] border border-amber-600/50 rounded-lg p-3 shadow-md">
+            <h3 className="text-amber-300 font-black text-xs uppercase tracking-wider mb-2 font-buddhist">
+              Giao diện phòng live
+            </h3>
+            <div className="grid grid-cols-2 gap-1.5">
+              {(['chua', 'nhatho'] as TempleMode[]).map((m) => (
+                <button
+                  key={m}
+                  onClick={() => {
+                    setTempleMode(m);
+                    setViewerPrayer(MODE_TEXT[m].defaultPrayer);
+                    appendLog(`[Giao diện] Đã chuyển sang ${MODE_TEXT[m].label}.`);
+                  }}
+                  className={`py-1.5 rounded text-xs font-bold border transition-all ${
+                    templeMode === m
+                      ? 'bg-gradient-to-r from-amber-600 to-amber-700 text-white border-amber-300 shadow-md'
+                      : 'bg-[#2b160b] text-amber-100/90 border-amber-700/40 hover:bg-[#3b1f10]'
+                  }`}
+                >
+                  {MODE_TEXT[m].label}
+                </button>
+              ))}
+            </div>
+            {templeMode === 'nhatho' && (
+              <p className="mt-1.5 text-[10.5px] text-amber-200/80 leading-snug">
+                Nhà thờ dùng nền nhà thờ riêng; các mẫu không gian và ảnh tùy chỉnh bên dưới chỉ áp dụng cho Chùa.
+              </p>
+            )}
+          </div>
+
           {/* 1. MẪU KHÔNG GIAN CHÙA */}
           <div className="bg-[#1e0f06] border border-amber-600/50 rounded-lg p-3 shadow-md">
             <h3 className="text-amber-300 font-black text-xs uppercase tracking-wider mb-2 flex items-center justify-between font-buddhist">
@@ -1358,6 +1405,7 @@ export const Dashboard: React.FC = () => {
                 meritTotal={meritTotal}
                 meritList={meritList}
                 currentTheme={currentTheme}
+                mode={templeMode}
                 customBgUrl={customBgUrl}
                 onCustomBgUpload={handleCustomBgUpload}
                 lastAction={lastAction}
@@ -1399,6 +1447,7 @@ export const Dashboard: React.FC = () => {
               meritTotal={meritTotal}
               meritList={meritList}
               currentTheme={currentTheme}
+              mode={templeMode}
               customBgUrl={customBgUrl}
               onCustomBgUpload={handleCustomBgUpload}
               lastAction={lastAction}

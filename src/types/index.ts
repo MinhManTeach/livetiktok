@@ -1,3 +1,6 @@
+// Interface style: Buddhist temple or Catholic church
+export type TempleMode = 'chua' | 'nhatho';
+
 export type SkinType = 'su_thay' | 'su_co' | 'phattu_ao_lam' | 'co_phuc';
 
 export interface Devotee {
@@ -99,6 +102,7 @@ export interface OverlayState {
   currentTheme: TempleTheme;
   customBgUrl?: string;
   lastAction: ActionEffect | null;
+  mode?: TempleMode;
 }
 
 // An audio file in public/music, listed by GET /api/music

@@ -46,12 +46,16 @@ const FALLBACK_STATE: OverlayState = {
  */
 export const LiveOverlay: React.FC = () => {
   const [state, setState] = useState<OverlayState>(FALLBACK_STATE);
+  // Wait for the Dashboard's real state before drawing, so a reload doesn't flash the sample scene on stream
+  const [ready, setReady] = useState(false);
   const soundOn = new URLSearchParams(window.location.search).get('sound') === '1';
 
   useEffect(() => {
+    const fallbackTimer = setTimeout(() => setReady(true), 2000);
     const es = new EventSource('/api/overlay/events');
     es.onmessage = (e) => {
       const next = JSON.parse(e.data) as OverlayState;
+      setReady(true);
       setState((prev) => ({
         ...next,
         // Every snapshot is a fresh object; keep the old action unless it is really new,
@@ -62,8 +66,13 @@ export const LiveOverlay: React.FC = () => {
             : next.lastAction,
       }));
     };
-    return () => es.close();
+    return () => {
+      clearTimeout(fallbackTimer);
+      es.close();
+    };
   }, []);
+
+  if (!ready) return <div className="w-full h-full bg-black" />;
 
   return (
     <TempleOverlay916
@@ -78,6 +87,7 @@ export const LiveOverlay: React.FC = () => {
       isStandalone={true}
       initialSoundEnabled={soundOn}
       initialToolbarVisible={false}
+      mode={state.mode ?? 'chua'}
     />
   );
 };
