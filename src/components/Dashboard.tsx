@@ -182,7 +182,7 @@ export const Dashboard: React.FC = () => {
       });
       appendLog(`[Thắp hương] 🕯️ ${viewerName} vừa dâng 1 nén tâm hương: "${viewerPrayer}"`);
     } else {
-      appendLog(`[Vào thiền] 🧘 ${viewerName} đã an tọa bồ đoàn (y phục: ${viewerSkin}).`);
+      appendLog(`[Vào thiền] 🧘 ${viewerName} đã an tọa bồ đoàn.`);
     }
 
     addOrUpdateDevotee(viewerName, viewerSkin, viewerPrayer, isIncense, 0);
@@ -330,6 +330,15 @@ export const Dashboard: React.FC = () => {
   useEffect(() => {
     loadMusicTracks();
     return () => musicElRef.current?.pause();
+  }, []);
+
+  // Restore the background uploaded earlier (kept on the server), so a reload doesn't fall back to the theme photo
+  useEffect(() => {
+    fetch('/api/overlay/background', { method: 'HEAD' })
+      .then((res) => {
+        if (res.ok) setCustomBgUrl((prev) => prev ?? `/api/overlay/background?v=${Date.now()}`);
+      })
+      .catch(() => undefined);
   }, []);
 
   const trackName = (src: string) =>
@@ -1134,8 +1143,8 @@ export const Dashboard: React.FC = () => {
                 </select>
               </div>
 
-              {/* Viewer Name & Skin */}
-              <div className="grid grid-cols-2 gap-2">
+              {/* Viewer Name */}
+              <div>
                 <div>
                   <label className="text-[11px] text-amber-200/80 block mb-1">Tên người xem:</label>
                   <input
@@ -1146,19 +1155,6 @@ export const Dashboard: React.FC = () => {
                   />
                 </div>
 
-                <div>
-                  <label className="text-[11px] text-amber-200/80 block mb-1">Chọn Skin nhân vật:</label>
-                  <select
-                    value={viewerSkin}
-                    onChange={(e) => setViewerSkin(e.target.value as SkinType)}
-                    className="w-full bg-[#120703] border border-amber-600/60 rounded px-2 py-1 text-xs text-amber-100 font-semibold focus:outline-none"
-                  >
-                    <option value="phattu_ao_lam">nam/nữ - Phật Tử Áo Lam</option>
-                    <option value="su_thay">sư - Sư Thầy (Y Cà Sa Vàng)</option>
-                    <option value="su_co">ni - Sư Cô (Áo Lam Nghiêm Trang)</option>
-                    <option value="co_phuc">cổ phục - Áo Dài Cổ Phục</option>
-                  </select>
-                </div>
               </div>
 
               {/* Prayer Text */}

@@ -10,3 +10,6 @@ coverage/
 # Background music is your own content; add files to public/music locally
 public/music/*
 !public/music/.gitkeep
+
+# Uploaded custom background (server keeps it across restarts)
+.data/

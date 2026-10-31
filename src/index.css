@@ -51,6 +51,27 @@
   animation: riseSmoke 3.9s infinite ease-out 2.4s;
 }
 
+/* Thin incense smoke wisps (IncenseBurner) */
+@keyframes smokeWisp {
+  0% {
+    transform: translateY(6px) scaleY(0.55);
+    opacity: 0;
+  }
+  25% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(-14px) translateX(3px) scaleY(1.1);
+    opacity: 0;
+  }
+}
+
+.animate-smoke-wisp {
+  animation: smokeWisp 4.5s ease-out infinite;
+  transform-box: fill-box;
+  transform-origin: bottom center;
+}
+
 /* Holy beam / God-ray animation */
 @keyframes beamGlow {
   0%, 100% {

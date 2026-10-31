@@ -15,7 +15,6 @@ interface DevoteeFigureProps {
 export const DevoteeFigure: React.FC<DevoteeFigureProps> = ({
   nickname,
   avatar,
-  skin,
   prayer,
   isStanding = false,
   showPrayer = true,
@@ -26,50 +25,19 @@ export const DevoteeFigure: React.FC<DevoteeFigureProps> = ({
   const avatarUrl =
     avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(nickname)}`;
 
-  // Color schemes for robes
-  const getSkinColors = (type: SkinType) => {
-    switch (type) {
-      case 'su_thay': // Golden Saffron Kāsāya
-        return {
-          top: '#e59b36',
-          mid: '#c5842b',
-          bot: '#8f5615',
-          stroke: '#663908',
-          head: '#2d1e15',
-          isMonk: true,
-        };
-      case 'su_co': // Gray-Blue Nun Robe
-        return {
-          top: '#93a0b5',
-          mid: '#6e7b92',
-          bot: '#485366',
-          stroke: '#343c4c',
-          head: '#221e1d',
-          isMonk: true,
-        };
-      case 'co_phuc': // Traditional Embroidered Silk Red/Plum
-        return {
-          top: '#b83b3b',
-          mid: '#8a2323',
-          bot: '#571414',
-          stroke: '#3b0a0a',
-          head: '#1c1514',
-          isMonk: false,
-        };
-      case 'phattu_ao_lam': // Classic Vietnamese Blue-Gray Temple Robe
-      default:
-        return {
-          top: '#a0acbf',
-          mid: '#76849b',
-          bot: '#505c70',
-          stroke: '#374150',
-          head: '#1b1716',
-          isMonk: false,
-        };
-    }
-  };
+  // Every devotee wears the lay Buddhist áo tràng lam (the `skin` prop is kept for data compatibility)
+  const lam = { light: '#9db4cc', mid: '#7593b2', dark: '#56718f', stroke: '#3b5068', collar: '#435c78' };
+  const hair = '#1c1511';
+  const skinTone = '#c99a78';
 
-  const colors = getSkinColors(skin);
+  // SVG ids must not contain spaces/diacritics from viewer names, or url(#id) fails and the robe renders black
+  const uid = React.useId().replace(/[^a-zA-Z0-9_-]/g, '');
+  const robeId = `robe-${uid}`;
+  const sleeveId = `sleeve-${uid}`;
+  const cushionId = `cushion-${uid}`;
+
+  // Stable per-name hairstyle: hair bun or short hair
+  const hasBun = [...nickname].reduce((sum, ch) => sum + ch.charCodeAt(0), 0) % 2 === 0;
 
   return (
     <div
@@ -85,85 +53,88 @@ export const DevoteeFigure: React.FC<DevoteeFigureProps> = ({
         </div>
       )}
 
-      {/* Back-view SVG figure */}
+      {/* Back-view SVG figure in áo tràng lam */}
       <div className={`relative ${isStanding ? 'w-14 h-20' : 'w-10 h-13'} animate-gentle-bow`}>
-        {isStanding ? (
-          // Standing pilgrim back view (dáng đứng chắp tay dâng hương)
-          <svg viewBox="0 0 80 120" className="w-full h-full drop-shadow-[0_4px_8px_rgba(0,0,0,0.85)]">
-            <defs>
-              <linearGradient id={`robeStand-${skin}-${nickname}`} x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor={colors.top} />
-                <stop offset="50%" stopColor={colors.mid} />
-                <stop offset="100%" stopColor={colors.bot} />
-              </linearGradient>
-            </defs>
+        <svg
+          viewBox={isStanding ? '0 0 80 120' : '0 0 70 85'}
+          className={`w-full h-full ${
+            isStanding ? 'drop-shadow-[0_4px_8px_rgba(0,0,0,0.85)]' : 'drop-shadow-[0_3px_6px_rgba(0,0,0,0.8)]'
+          }`}
+        >
+          <defs>
+            <linearGradient id={robeId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={lam.light} />
+              <stop offset="55%" stopColor={lam.mid} />
+              <stop offset="100%" stopColor={lam.dark} />
+            </linearGradient>
+            <linearGradient id={sleeveId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={lam.mid} />
+              <stop offset="100%" stopColor={lam.stroke} />
+            </linearGradient>
+            <radialGradient id={cushionId} cx="50%" cy="35%" r="70%">
+              <stop offset="0%" stopColor="#c08a3e" />
+              <stop offset="100%" stopColor="#6b4317" />
+            </radialGradient>
+          </defs>
 
-            {/* Head & Hair */}
-            {colors.isMonk ? (
-              // Shaved monk head
-              <ellipse cx="40" cy="20" rx="9.5" ry="11" fill="#755a4c" />
-            ) : (
-              // Traditional hair bun
-              <>
-                <circle cx="40" cy="11" r="5" fill={colors.head} />
-                <ellipse cx="40" cy="21" rx="9.5" ry="10.5" fill={colors.head} />
-              </>
-            )}
-
-            {/* Back Neck & Collar */}
-            <path d="M34 29 Q40 32 46 29 L48 35 Q40 37 32 35 Z" fill={colors.stroke} />
-
-            {/* Flowing Back Robe */}
-            <path
-              d="M32 34 Q40 37 48 34 L64 58 L56 64 L52 54 L60 114 L20 114 L28 54 L24 64 L16 58 Z"
-              fill={`url(#robeStand-${skin}-${nickname})`}
-              stroke={colors.stroke}
-              strokeWidth="1.2"
-            />
-
-            {/* Center seam & drapery folds */}
-            <line x1="40" y1="36" x2="40" y2="113" stroke={colors.stroke} strokeWidth="1.2" opacity="0.65" />
-            <line x1="33" y1="42" x2="28" y2="110" stroke={colors.stroke} strokeWidth="0.8" opacity="0.5" />
-            <line x1="47" y1="42" x2="52" y2="110" stroke={colors.stroke} strokeWidth="0.8" opacity="0.5" />
-          </svg>
-        ) : (
-          // Sitting meditating back view (dáng ngồi thiền xếp bằng trang nghiêm trên bồ đoàn)
-          <svg viewBox="0 0 70 85" className="w-full h-full drop-shadow-[0_3px_6px_rgba(0,0,0,0.8)]">
-            <defs>
-              <linearGradient id={`robeSit-${skin}-${nickname}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={colors.top} />
-                <stop offset="55%" stopColor={colors.mid} />
-                <stop offset="100%" stopColor={colors.bot} />
-              </linearGradient>
-            </defs>
-
-            {/* Head & Hair / Bun */}
-            {colors.isMonk ? (
-              <ellipse cx="35" cy="16" rx="8" ry="9" fill="#755a4c" />
-            ) : (
-              <>
-                <circle cx="35" cy="8" r="4.5" fill={colors.head} />
-                <ellipse cx="35" cy="17" rx="8" ry="8.8" fill={colors.head} />
-              </>
-            )}
-
-            {/* Neck / Collar */}
-            <path d="M29 23 Q35 25 41 23 L43 27 Q35 29 27 27 Z" fill={colors.stroke} />
-
-            {/* Seated Buddhist Robe spreading on cushion */}
-            <path
-              d="M27 26 Q35 29 43 26 L56 46 Q62 66 52 77 L18 77 Q8 66 14 46 Z"
-              fill={`url(#robeSit-${skin}-${nickname})`}
-              stroke={colors.stroke}
-              strokeWidth="1.1"
-            />
-
-            {/* Pleats and back lines */}
-            <line x1="35" y1="28" x2="35" y2="76" stroke={colors.stroke} strokeWidth="1" opacity="0.6" />
-            <path d="M25 38 Q22 55 20 74" stroke={colors.stroke} strokeWidth="0.8" opacity="0.5" fill="none" />
-            <path d="M45 38 Q48 55 50 74" stroke={colors.stroke} strokeWidth="0.8" opacity="0.5" fill="none" />
-          </svg>
-        )}
+          {isStanding ? (
+            // Standing back view (dáng đứng chắp tay dâng hương), áo tràng dài tới chân
+            <g>
+              <path
+                d="M30 34 Q40 31 50 34 Q58 38 60 50 L64 112 Q40 117 16 112 L20 50 Q22 38 30 34 Z"
+                fill={`url(#${robeId})`}
+                stroke={lam.stroke}
+                strokeWidth="1"
+              />
+              {/* Wide sleeves (tay áo tràng rộng) */}
+              <path d="M22 40 Q11 58 13 84 Q19 89 25 84 Q23 62 27 46 Z" fill={`url(#${sleeveId})`} stroke={lam.stroke} strokeWidth="0.8" />
+              <path d="M58 40 Q69 58 67 84 Q61 89 55 84 Q57 62 53 46 Z" fill={`url(#${sleeveId})`} stroke={lam.stroke} strokeWidth="0.8" />
+              {/* Back seam & folds */}
+              <line x1="40" y1="36" x2="40" y2="114" stroke={lam.stroke} strokeWidth="0.9" opacity="0.55" />
+              <path d="M32 52 Q29 80 27 111" stroke={lam.stroke} strokeWidth="0.7" opacity="0.4" fill="none" />
+              <path d="M48 52 Q51 80 53 111" stroke={lam.stroke} strokeWidth="0.7" opacity="0.4" fill="none" />
+              {/* Shoulder light */}
+              <path d="M30 36 Q40 33 50 36" stroke="#d6e2ee" strokeWidth="1" opacity="0.45" fill="none" />
+              {/* Neck, stand collar, head */}
+              <ellipse cx="40" cy="29" rx="4.5" ry="3.5" fill={skinTone} />
+              <path d="M31 31 Q40 36 49 31 L49 27 Q40 31 31 27 Z" fill={lam.collar} />
+              {!hasBun && <ellipse cx="30.8" cy="20" rx="1.6" ry="2.6" fill={skinTone} />}
+              {!hasBun && <ellipse cx="49.2" cy="20" rx="1.6" ry="2.6" fill={skinTone} />}
+              <ellipse cx="40" cy="19" rx="9.5" ry="10.5" fill={hair} />
+              <ellipse cx="37" cy="14" rx="4" ry="2.5" fill="#3a2d25" opacity="0.6" />
+              {hasBun && <circle cx="40" cy="9" r="5" fill={hair} />}
+            </g>
+          ) : (
+            // Seated meditation back view on a bồ đoàn cushion
+            <g>
+              <ellipse cx="35" cy="78" rx="28" ry="6.5" fill={`url(#${cushionId})`} />
+              <ellipse cx="35" cy="76.5" rx="22" ry="3.2" fill="#d8a95a" opacity="0.35" />
+              <path
+                d="M24 29 Q35 26 46 29 Q55 33 57 44 Q60 60 63 74 Q49 80 35 80 Q21 80 7 74 Q10 60 13 44 Q15 33 24 29 Z"
+                fill={`url(#${robeId})`}
+                stroke={lam.stroke}
+                strokeWidth="1"
+              />
+              {/* Wide sleeves resting on the lap */}
+              <path d="M15 40 Q6 54 7 71 Q12 75 18 71 Q17 56 20 45 Z" fill={`url(#${sleeveId})`} stroke={lam.stroke} strokeWidth="0.7" />
+              <path d="M55 40 Q64 54 63 71 Q58 75 52 71 Q53 56 50 45 Z" fill={`url(#${sleeveId})`} stroke={lam.stroke} strokeWidth="0.7" />
+              {/* Back seam & folds */}
+              <line x1="35" y1="30" x2="35" y2="78" stroke={lam.stroke} strokeWidth="0.9" opacity="0.55" />
+              <path d="M27 40 Q24 58 22 76" stroke={lam.stroke} strokeWidth="0.7" opacity="0.4" fill="none" />
+              <path d="M43 40 Q46 58 48 76" stroke={lam.stroke} strokeWidth="0.7" opacity="0.4" fill="none" />
+              {/* Shoulder light */}
+              <path d="M24 31 Q35 28 46 31" stroke="#d6e2ee" strokeWidth="1" opacity="0.45" fill="none" />
+              {/* Neck, stand collar, head */}
+              <ellipse cx="35" cy="24" rx="4" ry="3" fill={skinTone} />
+              <path d="M27 26 Q35 30.5 43 26 L43 22.5 Q35 26 27 22.5 Z" fill={lam.collar} />
+              {!hasBun && <ellipse cx="26.6" cy="15.5" rx="1.4" ry="2.3" fill={skinTone} />}
+              {!hasBun && <ellipse cx="43.4" cy="15.5" rx="1.4" ry="2.3" fill={skinTone} />}
+              <ellipse cx="35" cy="15" rx="8.5" ry="9.3" fill={hair} />
+              <ellipse cx="32.5" cy="10.5" rx="3.5" ry="2.2" fill="#3a2d25" opacity="0.6" />
+              {hasBun && <circle cx="35" cy="6.5" r="4.3" fill={hair} />}
+            </g>
+          )}
+        </svg>
       </div>
 
       {/* TikTok Nameplate with mini avatar badge */}

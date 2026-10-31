@@ -77,14 +77,27 @@ app.post('/api/overlay/state', (req, res) => {
 });
 
 // Custom background uploaded on the Dashboard, so OBS (a separate browser) can load it too.
-let background: { type: string; data: Buffer } | null = null;
+// Saved to .data/ so it survives server restarts and Dashboard reloads.
+const dataDir = path.resolve(import.meta.dirname, '.data');
+const bgFile = path.join(dataDir, 'background.bin');
+const bgTypeFile = path.join(dataDir, 'background.type');
 
-app.post('/api/overlay/background', express.raw({ type: 'image/*', limit: '20mb' }), (req, res) => {
+let background: { type: string; data: Buffer } | null = null;
+try {
+  background = { type: await fs.readFile(bgTypeFile, 'utf8'), data: await fs.readFile(bgFile) };
+} catch {
+  // No saved background yet
+}
+
+app.post('/api/overlay/background', express.raw({ type: 'image/*', limit: '20mb' }), async (req, res) => {
   if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
     res.status(400).json({ ok: false, error: 'Ảnh không hợp lệ' });
     return;
   }
   background = { type: req.get('Content-Type') ?? 'image/jpeg', data: req.body };
+  await fs.mkdir(dataDir, { recursive: true });
+  await fs.writeFile(bgFile, background.data);
+  await fs.writeFile(bgTypeFile, background.type);
   res.json({ ok: true, url: `/api/overlay/background?v=${Date.now()}` });
 });
 

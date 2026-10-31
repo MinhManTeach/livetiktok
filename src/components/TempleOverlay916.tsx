@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Devotee, MeritRecord, TempleTheme, ActionEffect } from '../types';
 import { DevoteeFigure } from './DevoteeFigure';
+import { IncenseBurner } from './IncenseBurner';
+import { SeatingWing } from './SeatingWing';
 import { Volume2, VolumeX, Eye, EyeOff, Upload, Sparkles } from 'lucide-react';
 import { audioService } from '../services/audioService';
 
@@ -120,12 +122,8 @@ export const TempleOverlay916: React.FC<TempleOverlay916Props> = ({
   // Display incense sticks (max 15 sticks visually)
   const stickCount = Math.min(15, Math.max(3, incenseCount));
 
-  // Determine grid density class based on slot count
-  const getColSpan = () => {
-    if (maxSlots >= 64) return 'grid-cols-4 gap-1.5';
-    if (maxSlots >= 36) return 'grid-cols-3 gap-2';
-    return 'grid-cols-2 gap-2.5';
-  };
+  // Seats per row in each wing, based on hall capacity
+  const seatCols = maxSlots >= 64 ? 4 : maxSlots >= 36 ? 3 : 2;
 
   return (
     <div className="relative w-full h-full overflow-hidden bg-[#0d0502] text-amber-50 select-none flex flex-col font-sans">
@@ -222,7 +220,7 @@ export const TempleOverlay916: React.FC<TempleOverlay916Props> = ({
       </div>
 
       {/* SANCTUARY UPPER AREA: HALO + BUDDHA STATUE AURA + INCENSE ALTAR + MERIT BOX */}
-      <div className="relative h-[37%] flex flex-col items-center justify-end pb-1.5 shrink-0 z-20">
+      <div className="relative h-[37%] flex flex-col items-center justify-end pb-1.5 shrink-0 z-[25]">
         {/* Divine Glowing Halo behind Buddha head */}
         <div
           className="absolute top-[8%] w-36 h-36 rounded-full blur-xl animate-halo pointer-events-none"
@@ -236,7 +234,6 @@ export const TempleOverlay916: React.FC<TempleOverlay916Props> = ({
           </div>
           <p>• Chat bất kỳ vào bồ đoàn</p>
           <p>• Gõ <b className="text-amber-300">"thắp hương"</b> dâng lễ</p>
-          <p>• Gõ <b className="text-amber-300">sư / ni / cổ phục</b></p>
           <p>• 🎁 <b className="text-amber-300">Tặng quà</b> vào Hòm</p>
         </div>
 
@@ -285,39 +282,12 @@ export const TempleOverlay916: React.FC<TempleOverlay916Props> = ({
           </div>
         </div>
 
-        {/* BRONZE INCENSE BURNER & SMOKE ALTAR (Lư Hương Đồng Tam Bảo) */}
-        <div className="relative flex flex-col items-center z-20">
-          {/* Rising Incense Smoke */}
-          <div className="relative w-16 h-20 -mb-2 pointer-events-none overflow-visible">
-            <div className="absolute bottom-0 left-[48%] w-3 h-3 bg-white/40 rounded-full blur-[4px] animate-smoke-1" />
-            <div className="absolute bottom-0 left-[38%] w-3.5 h-3.5 bg-amber-100/35 rounded-full blur-[5px] animate-smoke-2" />
-            <div className="absolute bottom-0 left-[58%] w-3 h-3 bg-white/30 rounded-full blur-[4px] animate-smoke-3" />
-          </div>
+        {/* BRONZE INCENSE BOWL WITH BURNING STICKS & SMOKE (Bát Hương Đồng) */}
+        <IncenseBurner stickCount={stickCount} />
 
-          {/* Incense Sticks burning in the pot */}
-          <div className="flex gap-1 items-end justify-center h-6 px-3 z-10">
-            {[...Array(stickCount)].map((_, i) => (
-              <div
-                key={i}
-                className="relative w-0.5 bg-red-700 rounded-xs"
-                style={{ height: `${16 + (i % 4) * 2}px` }}
-              >
-                <div className="absolute -top-0.5 -left-0.5 w-1.5 h-1.5 bg-red-500 rounded-full shadow-[0_0_6px_#ff793f,0_0_10px_#ffb142] animate-pulse" />
-              </div>
-            ))}
-          </div>
-
-          {/* Antique Bronze Incense Pot (Lư Đồng) */}
-          <div className="relative w-20 h-7 bg-gradient-to-r from-[#6e3c0d] via-[#d6963e] to-[#6e3c0d] border-2 border-amber-300 rounded-b-xl shadow-2xl flex items-center justify-center">
-            <div className="text-[8px] font-black text-[#311403] tracking-widest">
-              LƯ ĐỒNG
-            </div>
-          </div>
-        </div>
-
-        {/* CHIEF WORSHIPPER STANDING BEFORE THE ALTAR (Vị trí Chủ Lễ: 'Mih Tuu') */}
+        {/* CHIEF WORSHIPPER STANDING ON THE CARPET, BELOW THE INCENSE BOWL (Vị trí Chủ Lễ: 'Mih Tuu') */}
         {chiefDevotee && (
-          <div className="absolute bottom-[-18px] left-1/2 -translate-x-1/2 z-30">
+          <div className="absolute bottom-[-78px] left-1/2 -translate-x-1/2 z-30">
             <DevoteeFigure
               nickname={chiefDevotee.nickname}
               avatar={chiefDevotee.avatar}
@@ -344,28 +314,9 @@ export const TempleOverlay916: React.FC<TempleOverlay916Props> = ({
       )}
 
       {/* SEATING SANCTUARY: 2 WINGS (LEFT & RIGHT) + CENTER RED CARPET AISLE */}
-      <div className="relative flex-1 px-2 pt-5 pb-1 overflow-hidden z-20 flex">
+      <div className="relative flex-1 px-2 pb-1 overflow-hidden z-20 flex">
         {/* Left Wing Seating */}
-        <div
-          className={`flex-1 grid ${getColSpan()} auto-rows-max items-end justify-items-center gap-y-2 overflow-y-auto pr-1`}
-        >
-          {seatedDevotees
-            .filter((_, idx) => idx % 2 === 0)
-            .map((devotee) => (
-              <div key={devotee.id} className="relative flex flex-col items-center">
-                <DevoteeFigure
-                  nickname={devotee.nickname}
-                  avatar={devotee.avatar}
-                  skin={devotee.skin}
-                  prayer={devotee.prayer}
-                  isStanding={false}
-                  showPrayer={Boolean(devotee.prayer && devotee.incenseLit)}
-                />
-                {/* Round meditation cushion (Bồ Đoàn Vàng) */}
-                <div className="w-8 sm:w-10 h-3.5 bg-gradient-to-b from-amber-500 to-amber-800 border border-amber-300 rounded-full shadow-md -mt-1" />
-              </div>
-            ))}
-        </div>
+        <SeatingWing devotees={seatedDevotees.filter((_, idx) => idx % 2 === 0)} cols={seatCols} side="left" />
 
         {/* Center Red Carpet Aisle (Lối đi Thảm Đỏ Lễ Phật) */}
         <div className="relative w-18 sm:w-22 h-full mx-1 flex flex-col items-center justify-end">
@@ -387,26 +338,7 @@ export const TempleOverlay916: React.FC<TempleOverlay916Props> = ({
         </div>
 
         {/* Right Wing Seating */}
-        <div
-          className={`flex-1 grid ${getColSpan()} auto-rows-max items-end justify-items-center gap-y-2 overflow-y-auto pl-1`}
-        >
-          {seatedDevotees
-            .filter((_, idx) => idx % 2 !== 0)
-            .map((devotee) => (
-              <div key={devotee.id} className="relative flex flex-col items-center">
-                <DevoteeFigure
-                  nickname={devotee.nickname}
-                  avatar={devotee.avatar}
-                  skin={devotee.skin}
-                  prayer={devotee.prayer}
-                  isStanding={false}
-                  showPrayer={Boolean(devotee.prayer && devotee.incenseLit)}
-                />
-                {/* Round meditation cushion (Bồ Đoàn Vàng) */}
-                <div className="w-8 sm:w-10 h-3.5 bg-gradient-to-b from-amber-500 to-amber-800 border border-amber-300 rounded-full shadow-md -mt-1" />
-              </div>
-            ))}
-        </div>
+        <SeatingWing devotees={seatedDevotees.filter((_, idx) => idx % 2 !== 0)} cols={seatCols} side="right" />
       </div>
 
       {/* BOTTOM HUD: GIFT ACTION CARDS & LEADERBOARD (TẤM LÒNG THÀNH) */}
