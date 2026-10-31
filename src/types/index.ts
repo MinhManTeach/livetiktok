@@ -67,3 +67,36 @@ export interface TestStepResult {
   durationMs?: number;
   details?: string;
 }
+
+export type TikTokLiveEvent =
+  | {
+      type: 'status';
+      state: 'connecting' | 'connected' | 'disconnected';
+      uniqueId?: string;
+      message?: string;
+      timestamp: number;
+    }
+  | {
+      type: 'chat' | 'gift' | 'like' | 'member' | 'follow' | 'share';
+      uniqueId: string;
+      nickname: string;
+      avatar?: string;
+      comment?: string;
+      giftName?: string;
+      repeatCount?: number;
+      coins?: number;
+      likeCount?: number;
+      timestamp: number;
+    };
+
+// Snapshot of the Dashboard's temple state, mirrored to the OBS overlay (?view=overlay)
+export interface OverlayState {
+  devotees: Devotee[];
+  maxSlots: number;
+  incenseCount: number;
+  meritTotal: number;
+  meritList: MeritRecord[];
+  currentTheme: TempleTheme;
+  customBgUrl?: string;
+  lastAction: ActionEffect | null;
+}

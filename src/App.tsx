@@ -5,8 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Dashboard } from './components/Dashboard';
-import { TempleOverlay916 } from './components/TempleOverlay916';
-import { TEMPLE_THEMES, INITIAL_DEVOTEES } from './data/templeThemes';
+import { LiveOverlay } from './components/LiveOverlay';
 
 export default function App() {
   const [viewMode, setViewMode] = useState<'dashboard' | 'overlay'>('dashboard');
@@ -23,40 +22,7 @@ export default function App() {
     return (
       <div className="w-screen h-screen bg-black flex items-center justify-center overflow-hidden">
         <div className="w-full h-full max-w-[540px] max-h-[960px] aspect-[9/16] relative">
-          <TempleOverlay916
-            devotees={INITIAL_DEVOTEES}
-            maxSlots={36}
-            incenseCount={7}
-            meritTotal={254}
-            meritList={[
-              {
-                id: '1',
-                nickname: 'Đế Chinvn',
-                giftName: 'Hoa Sen Vàng',
-                coins: 19,
-                prayer: 'Cầu gia đình bình an',
-                timestamp: Date.now(),
-              },
-              {
-                id: '2',
-                nickname: 'HungDat',
-                giftName: 'Nén Tâm Hương',
-                coins: 9,
-                prayer: 'Nguyện cầu an lạc',
-                timestamp: Date.now(),
-              },
-              {
-                id: '3',
-                nickname: 'Tôi nghèo',
-                giftName: 'Hoa Hồng',
-                coins: 7,
-                prayer: 'Sám hối nghiệp chướng',
-                timestamp: Date.now(),
-              },
-            ]}
-            currentTheme={TEMPLE_THEMES[0]}
-            isStandalone={true}
-          />
+          <LiveOverlay />
           <button
             onClick={() => {
               const url = new URL(window.location.href);

@@ -16,6 +16,7 @@ interface TempleOverlay916Props {
   lastAction?: ActionEffect | null;
   onRunTest?: () => void;
   isStandalone?: boolean;
+  initialSoundEnabled?: boolean;
 }
 
 export const TempleOverlay916: React.FC<TempleOverlay916Props> = ({
@@ -30,6 +31,7 @@ export const TempleOverlay916: React.FC<TempleOverlay916Props> = ({
   lastAction,
   onRunTest,
   isStandalone = false,
+  initialSoundEnabled = true,
 }) => {
   const [activeWalkingPilgrim, setActiveWalkingPilgrim] = useState<{
     nickname: string;
@@ -41,7 +43,7 @@ export const TempleOverlay916: React.FC<TempleOverlay916Props> = ({
   const [boxShake, setBoxShake] = useState(false);
   const [coinParticles, setCoinParticles] = useState<{ id: number; left: number }[]>([]);
   const [showToolbar, setShowToolbar] = useState(true);
-  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [soundEnabled, setSoundEnabled] = useState(initialSoundEnabled);
 
   // Background priority: uploaded custom image -> theme image
   const effectiveBg = customBgUrl || currentTheme.bgUrl;

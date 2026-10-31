@@ -7,6 +7,8 @@ import {
   GiftOption,
   ActionEffect,
   SkinType,
+  TikTokLiveEvent,
+  OverlayState,
 } from '../types';
 import { TEMPLE_THEMES, TIKTOK_GIFTS, INITIAL_DEVOTEES } from '../data/templeThemes';
 import { TempleOverlay916 } from './TempleOverlay916';
@@ -91,6 +93,7 @@ export const Dashboard: React.FC = () => {
   const [selectedGiftId, setSelectedGiftId] = useState(TIKTOK_GIFTS[1].id);
   const [giftCount, setGiftCount] = useState(1);
   const [tiktokId, setTiktokId] = useState('@review.nghip.v');
+  const [tiktokStatus, setTiktokStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected');
 
   // Auto-simulation state
   const [isAutoSimActive, setIsAutoSimActive] = useState(false);
@@ -434,11 +437,144 @@ export const Dashboard: React.FC = () => {
     };
   }, []);
 
+  // Real TikTok LIVE events relayed by server.ts over SSE
+  const liveStatusSeenRef = useRef(false);
+  const handleLiveEvent = (ev: TikTokLiveEvent) => {
+    if (ev.type === 'status') {
+      setTiktokStatus(ev.state);
+      // The first status is the server's current state replayed on (re)load; don't log it as news.
+      const isReplay = !liveStatusSeenRef.current;
+      liveStatusSeenRef.current = true;
+      if (isReplay) return;
+      if (ev.state === 'connected') {
+        appendLog(`[TikTok Live] ✅ Đã kết nối kênh @${ev.uniqueId} (${ev.message}). Đang bắt comment & quà tặng thật.`);
+      } else if (ev.state === 'disconnected' && ev.message) {
+        appendLog(`[TikTok Live] ⛔ @${ev.uniqueId ?? ''}: ${ev.message}`);
+      }
+      return;
+    }
+
+    const name = ev.nickname;
+    switch (ev.type) {
+      case 'chat': {
+        const prayer = ev.comment || 'Nam Mô A Di Đà Phật 🙏';
+        setIncenseCount((prev) => prev + 1);
+        setLastAction({ type: 'INCENSE', nickname: name, message: prayer, timestamp: Date.now() });
+        addOrUpdateDevotee(name, 'phattu_ao_lam', prayer, true, 0);
+        appendLog(`[Live Comment] 🕯️ ${name}: "${prayer}"`);
+        break;
+      }
+      case 'gift': {
+        const coins = ev.coins ?? 1;
+        const giftName = `${(ev.repeatCount ?? 1) > 1 ? `${ev.repeatCount}x ` : ''}${ev.giftName}`;
+        const prayer = 'Cúng dường Tam Bảo, phước báu vô lượng';
+        setMeritTotal((prev) => prev + coins);
+        setIncenseCount((prev) => prev + 2);
+        setMeritList((prev) => [
+          { id: `live-m-${ev.timestamp}-${Math.random()}`, nickname: name, giftName, coins, prayer, timestamp: ev.timestamp },
+          ...prev.slice(0, 19),
+        ]);
+        addOrUpdateDevotee(name, 'phattu_ao_lam', prayer, true, coins);
+        setLastAction({
+          type: 'MERIT_BOX',
+          nickname: name,
+          giftName,
+          coins,
+          ttsText: audioSettings.directAudioEnabled
+            ? `Nam Mô A Di Đà Phật. Thí chủ ${name} vừa cúng dường ${giftName} vào Hòm Công Đức.`
+            : undefined,
+          timestamp: Date.now(),
+        });
+        appendLog(`[Live Quà] 🎁 ${name} dâng "${giftName}" (+${coins} xu)`);
+        break;
+      }
+      case 'member':
+        addOrUpdateDevotee(name, 'phattu_ao_lam', 'Nam Mô A Di Đà Phật', false, 0);
+        appendLog(`[Live] 🧘 ${name} vừa vào Chánh Điện.`);
+        break;
+      case 'follow':
+        appendLog(`[Live] 🙏 ${name} đã theo dõi kênh.`);
+        break;
+      case 'share':
+        appendLog(`[Live] 📣 ${name} đã chia sẻ buổi live.`);
+        break;
+      // 'like' fires too often to log
+    }
+  };
+
+  const liveEventHandlerRef = useRef(handleLiveEvent);
+  liveEventHandlerRef.current = handleLiveEvent;
+
+  useEffect(() => {
+    const es = new EventSource('/api/tiktok/events');
+    es.onmessage = (e) => liveEventHandlerRef.current(JSON.parse(e.data) as TikTokLiveEvent);
+    return () => es.close();
+  }, []);
+
+  // Mirror the temple state to the OBS overlay (?view=overlay) through the server
+  useEffect(() => {
+    const state: OverlayState = {
+      devotees,
+      maxSlots,
+      incenseCount,
+      meritTotal,
+      meritList,
+      currentTheme,
+      // blob: URLs only exist in this tab; the server URL replaces it once the upload finishes
+      customBgUrl: customBgUrl?.startsWith('blob:') ? undefined : customBgUrl,
+      lastAction,
+    };
+    const timer = setTimeout(() => {
+      fetch('/api/overlay/state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(state),
+      }).catch(() => undefined);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [devotees, maxSlots, incenseCount, meritTotal, meritList, currentTheme, customBgUrl, lastAction]);
+
+  const handleTikTokConnect = async () => {
+    if (tiktokStatus === 'connected' || tiktokStatus === 'connecting') {
+      await fetch('/api/tiktok/disconnect', { method: 'POST' }).catch(() => undefined);
+      return;
+    }
+    appendLog(`[TikTok Live] 🔗 Đang kết nối tới phòng live của ${tiktokId}...`);
+    setTiktokStatus('connecting');
+    try {
+      const res = await fetch('/api/tiktok/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uniqueId: tiktokId }),
+      });
+      const data = await res.json();
+      if (!data.ok) {
+        setTiktokStatus('disconnected');
+        appendLog(`[TikTok Live] ❌ Kết nối thất bại: ${data.error}`);
+      }
+    } catch {
+      setTiktokStatus('disconnected');
+      appendLog('[TikTok Live] ❌ Không gọi được server. Hãy chạy app bằng "npm run dev".');
+    }
+  };
+
   // Handle custom image upload
   const handleCustomBgUpload = (file: File) => {
     const url = URL.createObjectURL(file);
     setCustomBgUrl(url);
     appendLog(`[Ảnh Chánh Điện] Đã nạp thành công ảnh tùy chỉnh: "${file.name}"`);
+
+    // Upload to the server so the OBS overlay (another browser) can show it too
+    fetch('/api/overlay/background', {
+      method: 'POST',
+      headers: { 'Content-Type': file.type || 'image/jpeg' },
+      body: file,
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.ok) setCustomBgUrl(data.url);
+      })
+      .catch(() => appendLog('[Overlay OBS] ⚠️ Không gửi được ảnh nền lên server, Overlay OBS sẽ dùng ảnh mẫu.'));
   };
 
   // Automated Run Test implementation
@@ -1035,16 +1171,19 @@ export const Dashboard: React.FC = () => {
                     className="col-span-7 bg-[#120703] border border-amber-600/60 rounded px-2 py-1 text-xs text-emerald-400 font-bold focus:outline-none"
                   />
                   <button
-                    onClick={() => {
-                      appendLog(`[TikTok Live] 🔗 Đang kết nối tới phòng live của ${tiktokId}...`);
-                      setTimeout(() => {
-                        appendLog(`[TikTok Live] ✅ Đã kết nối kênh ${tiktokId}! Sẵn sàng bắt comment & quà tặng.`);
-                      }, 1000);
-                    }}
-                    className="col-span-3 py-1 rounded bg-red-800 hover:bg-red-700 text-white text-xs font-bold shadow flex items-center justify-center gap-1 transition-colors"
+                    onClick={handleTikTokConnect}
+                    className={`col-span-3 py-1 rounded text-white text-xs font-bold shadow flex items-center justify-center gap-1 transition-colors ${
+                      tiktokStatus === 'connected'
+                        ? 'bg-emerald-700 hover:bg-emerald-600'
+                        : tiktokStatus === 'connecting'
+                          ? 'bg-amber-700 animate-pulse'
+                          : 'bg-red-800 hover:bg-red-700'
+                    }`}
                   >
                     <Radio size={12} />
-                    <span>Kết Nối</span>
+                    <span>
+                      {tiktokStatus === 'connected' ? 'Ngắt' : tiktokStatus === 'connecting' ? 'Đang nối…' : 'Kết Nối'}
+                    </span>
                   </button>
                   <button
                     onClick={handleToggleAutoSim}
