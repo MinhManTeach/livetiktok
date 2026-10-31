@@ -8,6 +8,8 @@ class AudioService {
   private droneOsc: OscillatorNode | null = null;
   private droneGain: GainNode | null = null;
   private woodenFishInterval: number | null = null;
+  private noiseBuffer: AudioBuffer | null = null;
+  private reverbSend: AudioNode | null = null;
 
   private getAudioContext(): AudioContext {
     if (!this.ctx) {
@@ -60,45 +62,100 @@ class AudioService {
     }
   }
 
+  // Short white noise for the stick-on-wood knock
+  private getNoiseBuffer(ctx: AudioContext): AudioBuffer {
+    if (!this.noiseBuffer) {
+      this.noiseBuffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.05), ctx.sampleRate);
+      const data = this.noiseBuffer.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+    }
+    return this.noiseBuffer;
+  }
+
+  // Temple hall echo: convolver with a generated ~1.6s decaying-noise impulse response
+  private getReverbSend(ctx: AudioContext): AudioNode {
+    if (!this.reverbSend) {
+      const len = Math.floor(ctx.sampleRate * 1.6);
+      const ir = ctx.createBuffer(2, len, ctx.sampleRate);
+      for (let ch = 0; ch < 2; ch++) {
+        const data = ir.getChannelData(ch);
+        for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.2);
+      }
+      const conv = ctx.createConvolver();
+      conv.buffer = ir;
+      const wet = ctx.createGain();
+      wet.gain.value = 0.22;
+      conv.connect(wet);
+      wet.connect(ctx.destination);
+      this.reverbSend = conv;
+    }
+    return this.reverbSend;
+  }
+
   /**
-   * Tiếng Gõ Mõ Gỗ (Wooden Fish percussion strike)
+   * Tiếng Gõ Mõ Gỗ (Wooden Fish) - mõ lớn chánh điện: trầm, ấm, có tiếng vang
+   * Knock (band-passed noise) + hollow body thump + 3 decaying wood resonances.
    */
   public playWoodenFish(volume = 0.6): void {
     try {
       const ctx = this.getAudioContext();
       const now = ctx.currentTime;
+      const v = volume * (0.92 + Math.random() * 0.16); // human variation between strikes
 
-      // Resonant body
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
+      const out = ctx.createGain();
+      out.connect(ctx.destination);
+      out.connect(this.getReverbSend(ctx));
 
-      osc.type = 'triangle';
-      // Fast downward pitch chirp typical of hollow wood strike
-      osc.frequency.setValueAtTime(680, now);
-      osc.frequency.exponentialRampToValueAtTime(320, now + 0.09);
+      // 1. Knock: very short band-passed noise burst
+      const noise = ctx.createBufferSource();
+      noise.buffer = this.getNoiseBuffer(ctx);
+      const band = ctx.createBiquadFilter();
+      band.type = 'bandpass';
+      band.frequency.value = 1400;
+      band.Q.value = 1.2;
+      const noiseGain = ctx.createGain();
+      noiseGain.gain.setValueAtTime(v * 0.9, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.018);
+      noise.connect(band);
+      band.connect(noiseGain);
+      noiseGain.connect(out);
+      noise.start(now);
+      noise.stop(now + 0.03);
 
-      gain.gain.setValueAtTime(volume, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.13);
+      // 2. Hollow body thump
+      const body = ctx.createOscillator();
+      const bodyGain = ctx.createGain();
+      body.type = 'sine';
+      body.frequency.setValueAtTime(190 * 1.15, now);
+      body.frequency.exponentialRampToValueAtTime(190, now + 0.03);
+      bodyGain.gain.setValueAtTime(v * 0.5, now);
+      bodyGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.06);
+      body.connect(bodyGain);
+      bodyGain.connect(out);
+      body.start(now);
+      body.stop(now + 0.08);
 
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-
-      osc.start(now);
-      osc.stop(now + 0.14);
-
-      // Subtle click attack
-      const clickOsc = ctx.createOscillator();
-      const clickGain = ctx.createGain();
-      clickOsc.type = 'square';
-      clickOsc.frequency.setValueAtTime(1400, now);
-      clickGain.gain.setValueAtTime(volume * 0.35, now);
-      clickGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.025);
-
-      clickOsc.connect(clickGain);
-      clickGain.connect(ctx.destination);
-
-      clickOsc.start(now);
-      clickOsc.stop(now + 0.03);
+      // 3. Wood resonances [Hz, gain, decay s] with a tiny pitch drop
+      const detune = 1 + (Math.random() - 0.5) * 0.01;
+      const modes: [number, number, number][] = [
+        [390, 1.0, 0.24],
+        [905, 0.45, 0.13],
+        [1630, 0.18, 0.07],
+      ];
+      modes.forEach(([f, g, decay]) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(f * detune * 1.03, now);
+        osc.frequency.exponentialRampToValueAtTime(f * detune, now + 0.02);
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.linearRampToValueAtTime(v * g * 0.55, now + 0.002);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + decay);
+        osc.connect(gain);
+        gain.connect(out);
+        osc.start(now);
+        osc.stop(now + decay + 0.02);
+      });
     } catch {
       // Audio policy
     }
@@ -240,6 +297,22 @@ class AudioService {
       window.speechSynthesis.cancel();
     }
   }
+
+  // Stop every loop and sound this instance owns
+  public dispose(): void {
+    this.setWoodenFishLoop(false);
+    this.stopSpeech();
+    this.ctx?.close().catch(() => undefined);
+    this.ctx = null;
+    this.droneOsc = null;
+    this.droneGain = null;
+    this.noiseBuffer = null;
+    this.reverbSend = null;
+  }
 }
 
 export const audioService = new AudioService();
+
+// When this file is hot-updated (e.g. tweaking sounds during a live), the old instance is replaced;
+// stop its loops so they don't keep playing on stream with no way to turn them off.
+import.meta.hot?.dispose(() => audioService.dispose());

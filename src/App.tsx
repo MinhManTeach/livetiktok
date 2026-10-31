@@ -15,6 +15,8 @@ export default function App() {
     const params = new URLSearchParams(window.location.search);
     if (params.get('view') === 'overlay' || window.location.pathname === '/overlay.html') {
       setViewMode('overlay');
+      // Distinct window title: LIVE Studio hides windows whose title contains "TikTok Live Studio" from Window capture
+      document.title = 'Overlay Chanh Dien 9x16';
     }
   }, []);
 
