@@ -1,0 +1,6 @@
+{
+  "name": "Thiền Đường Tịnh Tâm - TikTok Live Studio",
+  "description": "Ứng dụng quản lý phòng Live TikTok Chánh Điện Bái Phật, Thắp Hương, Hòm Công Đức nảy xu và Overlay 9:16 chuyên nghiệp cho OBS và TikTok LIVE Studio.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

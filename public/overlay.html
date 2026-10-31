@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <script>
+    // Ensure window.fetch has both getter and setter for extensions/test runners
+    (function() {
+      try {
+        var currentFetch = window.fetch ? window.fetch.bind(window) : null;
+        Object.defineProperty(window, 'fetch', {
+          get: function() {
+            return currentFetch;
+          },
+          set: function(val) {
+            currentFetch = val;
+          },
+          configurable: true,
+          enumerable: true
+        });
+      } catch (err) {}
+    })();
+  </script>
+  <meta http-equiv="refresh" content="0; url=/?view=overlay">
+  <title>Thiền Đường Tịnh Tâm - Overlay 9:16</title>
+  <script>
+    window.location.href = '/?view=overlay';
+  </script>
+</head>
+<body style="background: #0d0502; color: #ffd700; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0;">
+  <p>Đang chuyển hướng tới Màn hình Overlay 9:16...</p>
+</body>
+</html>

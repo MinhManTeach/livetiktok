@@ -1,0 +1,196 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  }
+  h1, h2, h3, .font-buddhist {
+    font-family: 'Cinzel', 'Playfair Display', serif;
+  }
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #140b05;
+}
+::-webkit-scrollbar-thumb {
+  background: #59351a;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #b87b28;
+}
+
+/* Smoke rising effect */
+@keyframes riseSmoke {
+  0% {
+    transform: translateY(0) scale(0.7) rotate(0deg);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translateY(-40px) translateX(6px) scale(1.6) rotate(10deg);
+    opacity: 0.45;
+  }
+  100% {
+    transform: translateY(-90px) translateX(-8px) scale(2.8) rotate(-15deg);
+    opacity: 0;
+  }
+}
+
+.animate-smoke-1 {
+  animation: riseSmoke 3.6s infinite ease-out;
+}
+.animate-smoke-2 {
+  animation: riseSmoke 4.2s infinite ease-out 1.2s;
+}
+.animate-smoke-3 {
+  animation: riseSmoke 3.9s infinite ease-out 2.4s;
+}
+
+/* Holy beam / God-ray animation */
+@keyframes beamGlow {
+  0%, 100% {
+    transform: scaleX(0.9);
+    opacity: 0.75;
+  }
+  50% {
+    transform: scaleX(1.35);
+    opacity: 0.95;
+  }
+}
+
+.animate-beam-glow {
+  animation: beamGlow 2.5s infinite alternate ease-in-out;
+}
+
+/* Halo pulse */
+@keyframes pulseHalo {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+}
+
+.animate-halo {
+  animation: pulseHalo 4.5s infinite ease-in-out;
+}
+
+/* Petal falling animation */
+@keyframes fallPetal {
+  0% {
+    transform: translateY(-20px) translateX(0) rotate(0deg);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateY(105vh) translateX(70px) rotate(420deg);
+    opacity: 0;
+  }
+}
+
+.animate-petal {
+  animation: fallPetal 9s linear infinite;
+}
+
+/* Merit Box Shake on Coin Drop */
+@keyframes boxShake {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+  }
+  20% {
+    transform: scale(1.08) rotate(-4deg);
+  }
+  40% {
+    transform: scale(1.12) rotate(4deg);
+  }
+  60% {
+    transform: scale(1.08) rotate(-2deg);
+  }
+  80% {
+    transform: scale(1.04) rotate(2deg);
+  }
+}
+
+.animate-box-shake {
+  animation: boxShake 0.65s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+/* Walking Pilgrim up red carpet */
+@keyframes walkUpCarpet {
+  0% {
+    bottom: -8%;
+    transform: scale(1.22);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  80% {
+    bottom: 84%;
+    transform: scale(0.94);
+    opacity: 1;
+  }
+  100% {
+    bottom: 92%;
+    transform: scale(0.88);
+    opacity: 0;
+  }
+}
+
+.animate-walk-carpet {
+  animation: walkUpCarpet 4.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+/* Bowing prayer figure */
+@keyframes gentleBow {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(2px);
+  }
+}
+
+.animate-gentle-bow {
+  animation: gentleBow 3.2s infinite ease-in-out;
+}
+
+/* Floating bubble prayer */
+@keyframes floatBubble {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.animate-float-bubble {
+  animation: floatBubble 2.8s infinite ease-in-out;
+}
+
+/* Coin pop sparkle */
+@keyframes coinSparkle {
+  0% {
+    transform: translateY(0) scale(0.5);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-50px) scale(1.4);
+    opacity: 0;
+  }
+}
+
+.animate-coin-pop {
+  animation: coinSparkle 0.85s ease-out forwards;
+}
