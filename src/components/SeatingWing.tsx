@@ -11,7 +11,7 @@ interface SeatingWingProps {
 
 // Row bases as % of the wing height: first row sits on the hall floor (below the altar table),
 // later rows come toward the camera. Spacing tightens when there are many rows.
-const FIRST_ROW = 47;
+const FIRST_ROW = 45;
 const LAST_ROW = 99;
 const MAX_STEP = 13;
 // Only recent prayers get a speech bubble, so a full hall isn't buried under bubbles

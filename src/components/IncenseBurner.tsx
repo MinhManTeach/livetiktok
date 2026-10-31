@@ -30,7 +30,7 @@ export const IncenseBurner: React.FC<IncenseBurnerProps> = ({ stickCount }) => {
   const smokeFrom = [sticks[0], sticks[Math.floor(stickCount / 2)], sticks[stickCount - 1]].filter(Boolean);
 
   return (
-    <div className="relative flex flex-col items-center z-20 pointer-events-none -translate-y-9">
+    <div className="relative flex flex-col items-center z-20 pointer-events-none">
       <svg viewBox="0 0 100 116" className="w-[104px] h-[120px] overflow-visible">
         <defs>
           <linearGradient id={bronzeId} x1="0" y1="0" x2="1" y2="0">

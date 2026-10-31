@@ -282,24 +282,27 @@ export const TempleOverlay916: React.FC<TempleOverlay916Props> = ({
           </div>
         </div>
 
-        {/* BRONZE INCENSE BOWL WITH BURNING STICKS & SMOKE (Bát Hương Đồng) */}
-        <IncenseBurner stickCount={stickCount} />
-
-        {/* CHIEF WORSHIPPER STANDING ON THE CARPET, BELOW THE INCENSE BOWL (Vị trí Chủ Lễ: 'Mih Tuu') */}
-        {chiefDevotee && (
-          <div className="absolute bottom-[-78px] left-1/2 -translate-x-1/2 z-30">
-            <DevoteeFigure
-              nickname={chiefDevotee.nickname}
-              avatar={chiefDevotee.avatar}
-              skin={chiefDevotee.skin}
-              prayer={chiefDevotee.prayer}
-              isStanding={true}
-              isChief={true}
-              showPrayer={true}
-            />
-          </div>
-        )}
       </div>
+
+      {/* BRONZE INCENSE BOWL on the altar table, between the two fruit plates of the background (Bát Hương Đồng) */}
+      <div className="absolute left-1/2 top-[53.5%] -translate-x-1/2 -translate-y-full scale-[0.85] origin-bottom z-[24]">
+        <IncenseBurner stickCount={stickCount} />
+      </div>
+
+      {/* CHIEF WORSHIPPER standing where the red carpet ends, at the foot of the altar (Vị trí Chủ Lễ) */}
+      {chiefDevotee && (
+        <div className="absolute left-1/2 top-[67%] -translate-x-1/2 -translate-y-full z-[26]">
+          <DevoteeFigure
+            nickname={chiefDevotee.nickname}
+            avatar={chiefDevotee.avatar}
+            skin={chiefDevotee.skin}
+            prayer={chiefDevotee.prayer}
+            isStanding={true}
+            isChief={true}
+            showPrayer={true}
+          />
+        </div>
+      )}
 
       {/* SO HOI HUONG TOAST POPUP BANNER */}
       {toast && (
@@ -321,7 +324,7 @@ export const TempleOverlay916: React.FC<TempleOverlay916Props> = ({
         {/* Center Red Carpet Aisle (Lối đi Thảm Đỏ Lễ Phật) */}
         <div className="relative w-18 sm:w-22 h-full mx-1 flex flex-col items-center justify-end">
           {/* Red Carpet Floor Texture */}
-          <div className="absolute inset-x-0 bottom-0 top-0 bg-gradient-to-b from-[#64100c] via-[#851610] to-[#500c09] border-x-2 border-amber-400/80 shadow-[inset_0_0_12px_rgba(0,0,0,0.8)] opacity-90 rounded-t-sm" />
+          <div className="absolute inset-x-0 bottom-0 top-[38%] bg-gradient-to-b from-[#64100c] via-[#851610] to-[#500c09] border-x-2 border-amber-400/80 shadow-[inset_0_0_12px_rgba(0,0,0,0.8)] opacity-90 rounded-t-sm" />
 
           {/* Walking Pilgrim along the Red Carpet */}
           {activeWalkingPilgrim && (

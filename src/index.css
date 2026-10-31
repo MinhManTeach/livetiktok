@@ -5,7 +5,7 @@
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   }
   h1, h2, h3, .font-buddhist {
-    font-family: 'Cinzel', 'Playfair Display', serif;
+    font-family: 'Playfair Display SC', 'Playfair Display', serif;
   }
 }
 
@@ -157,12 +157,12 @@
     opacity: 1;
   }
   80% {
-    bottom: 84%;
+    bottom: 54%;
     transform: scale(0.94);
     opacity: 1;
   }
   100% {
-    bottom: 92%;
+    bottom: 60%;
     transform: scale(0.88);
     opacity: 0;
   }
